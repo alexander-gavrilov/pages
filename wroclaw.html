@@ -26,6 +26,31 @@
             transform: scale(1.1);
             box-shadow: 0 0 15px rgba(13, 148, 136, 0.5);
         }
+        /* Mobile improvements */
+        @media (max-width: 640px) {
+            .chart-container {
+                height: 220px !important;
+                min-width: 0;
+                width: 100vw !important;
+                margin-left: -1.5rem;
+                margin-right: -1.5rem;
+            }
+            .timeline-scroll {
+                overflow-x: auto;
+                -webkit-overflow-scrolling: touch;
+                padding-bottom: 0.5rem;
+                margin-left: -1.5rem;
+                margin-right: -1.5rem;
+            }
+            .timeline-item {
+                min-width: 220px;
+            }
+            .tab-btn {
+                font-size: 1rem;
+                padding-left: 0.5rem;
+                padding-right: 0.5rem;
+            }
+        }
     </style>
 </head>
 <body class="bg-amber-50 text-stone-800">
@@ -38,7 +63,7 @@
 
         <main class="grid grid-cols-1 lg:grid-cols-12 gap-8">
             
-            <aside class="lg:col-span-4 xl:col-span-3 bg-white/80 backdrop-blur-sm p-6 rounded-2xl shadow-lg self-start sticky top-8">
+            <aside class="lg:col-span-4 xl:col-span-3 bg-white/80 backdrop-blur-sm p-4 md:p-6 rounded-2xl shadow-lg self-start lg:sticky lg:top-8 mb-6 lg:mb-0">
                 <h2 class="text-2xl font-bold mb-4 text-stone-800">Обзор тура</h2>
                 <div class="space-y-4">
                     <div class="flex items-center bg-amber-100/50 p-3 rounded-lg">
@@ -65,17 +90,18 @@
                 </div>
 
                 <h3 class="text-xl font-bold mt-8 mb-4 text-stone-800">Распределение времени</h3>
-                <div class="chart-container relative h-64 w-full max-w-xs mx-auto">
+                <div class="chart-container relative h-64 w-full max-w-xs mx-auto"></div>
                     <canvas id="timeAllocationChart"></canvas>
                 </div>
 
                 <h3 class="text-xl font-bold mt-8 mb-4 text-stone-800">Маршрут</h3>
-                <div id="timeline-nav" class="space-y-2">
+                <div class="timeline-scroll">
+                  <div id="timeline-nav" class="space-y-2 flex flex-col sm:block sm:space-y-0 sm:space-x-2"></div>
                 </div>
             </aside>
 
             <div id="main-content" class="lg:col-span-8 xl:col-span-9">
-                <div id="intro-view" class="bg-white p-8 rounded-2xl shadow-lg">
+                <div id="intro-view" class="bg-white p-4 md:p-8 rounded-2xl shadow-lg">
                     <h2 class="text-3xl font-bold text-stone-800 mb-4">Добро пожаловать в Город Гномов!</h2>
                     <p class="text-stone-600 leading-relaxed mb-4">Вроцлав — это город, где история встречается со сказкой. Этот тур создан специально для семей: мы будем не только осматривать величественные достопримечательности, но и вести увлекательную охоту на знаменитых вроцлавских гномов. Приложение поможет вам легко ориентироваться, расскажет удивительные истории для старших и предложит веселые задания для младших.</p>
                     <p class="text-stone-600 leading-relaxed">Выберите любую остановку из списка слева, чтобы начать свое путешествие, или следуйте по порядку, чтобы ничего не пропустить. Желаем вам незабываемых впечатлений!</p>
@@ -294,10 +320,10 @@
 
         function renderTimeline() {
             timelineNav.innerHTML = tourData.map(stop => `
-                <div data-id="${stop.id}" class="timeline-item flex items-center cursor-pointer p-3 rounded-lg hover:bg-amber-100 transition-all duration-300">
+                <div data-id="${stop.id}" class="timeline-item flex items-center cursor-pointer p-3 rounded-lg hover:bg-amber-100 transition-all duration-300 mb-2 sm:mb-0 sm:inline-block sm:mr-2">
                     <div class="flex-shrink-0 h-10 w-10 rounded-full ${stop.type === 'sight' ? 'bg-teal-600' : 'bg-amber-500'} flex items-center justify-center text-white font-bold text-lg">${stop.id}</div>
                     <div class="ml-4">
-                        <h4 class="font-semibold text-stone-800">${stop.title}</h4>
+                        <h4 class="font-semibold text-stone-800 text-base sm:text-lg">${stop.title}</h4>
                         <p class="text-sm text-stone-500">${stop.duration} мин</p>
                     </div>
                 </div>

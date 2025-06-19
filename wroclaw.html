@@ -1,0 +1,372 @@
+<!DOCTYPE html>
+<html lang="ru">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Интерактивный тур по Вроцлаву для всей семьи</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Nunito:wght@400;600;700&display=swap" rel="stylesheet">
+    <!-- Chosen Palette: Wroclaw Warmth (Amber, Stone, with Teal accent) -->
+    <!-- Application Structure Plan: A two-panel SPA design. The left panel contains non-linear navigation via clickable cards and an overview dashboard with a time-allocation chart. The right panel displays detailed information for the selected stop. This structure enhances usability by offering flexibility over the report's linear format, which is ideal for a family on a tour. A visual timeline provides progress tracking. -->
+    <!-- Visualization & Content Choices: Tour Overview -> Inform -> Dynamic Stat Cards (HTML/CSS) for quick facts. Tour Pacing -> Compare/Inform -> Donut Chart (Chart.js) to visualize time allocation. Stop Details -> Organize -> Tabbed Cards (HTML/CSS/JS) to cleanly separate different types of information (description, dwarf hunt, fun facts) for each landmark. Tour Route -> Organize/Guide -> Clickable vertical timeline (HTML/CSS/JS) as a primary navigation element. CONFIRMATION: NO SVG graphics used. NO Mermaid JS used. -->
+    <!-- CONFIRMATION: NO SVG graphics used. NO Mermaid JS used. -->
+    <style>
+        body {
+            font-family: 'Nunito', sans-serif;
+        }
+        .tab-active {
+            border-color: #0d9488;
+            color: #0d9488;
+            font-weight: 700;
+        }
+        .timeline-item-active {
+            transform: scale(1.1);
+            box-shadow: 0 0 15px rgba(13, 148, 136, 0.5);
+        }
+    </style>
+</head>
+<body class="bg-amber-50 text-stone-800">
+
+    <div class="container mx-auto p-4 md:p-8">
+        <header class="text-center mb-8">
+            <h1 class="text-4xl md:text-5xl font-bold text-stone-900">Семейное приключение во Вроцлаве</h1>
+            <p class="text-lg text-stone-600 mt-2">Ваш интерактивный путеводитель по главным достопримечательностям и поиску гномов!</p>
+        </header>
+
+        <main class="grid grid-cols-1 lg:grid-cols-12 gap-8">
+            
+            <aside class="lg:col-span-4 xl:col-span-3 bg-white/80 backdrop-blur-sm p-6 rounded-2xl shadow-lg self-start sticky top-8">
+                <h2 class="text-2xl font-bold mb-4 text-stone-800">Обзор тура</h2>
+                <div class="space-y-4">
+                    <div class="flex items-center bg-amber-100/50 p-3 rounded-lg">
+                        <span class="text-2xl mr-3">⏱️</span>
+                        <div>
+                            <div class="font-bold text-stone-700">Общее время</div>
+                            <div class="text-stone-600">~3.5 - 4 часа</div>
+                        </div>
+                    </div>
+                    <div class="flex items-center bg-amber-100/50 p-3 rounded-lg">
+                        <span class="text-2xl mr-3">📍</span>
+                        <div>
+                            <div class="font-bold text-stone-700">Всего остановок</div>
+                            <div id="total-stops" class="text-stone-600"></div>
+                        </div>
+                    </div>
+                     <div class="flex items-center bg-amber-100/50 p-3 rounded-lg">
+                        <span class="text-2xl mr-3">👣</span>
+                        <div>
+                            <div class="font-bold text-stone-700">Тип тура</div>
+                            <div class="text-stone-600">Пешеходный</div>
+                        </div>
+                    </div>
+                </div>
+
+                <h3 class="text-xl font-bold mt-8 mb-4 text-stone-800">Распределение времени</h3>
+                <div class="chart-container relative h-64 w-full max-w-xs mx-auto">
+                    <canvas id="timeAllocationChart"></canvas>
+                </div>
+
+                <h3 class="text-xl font-bold mt-8 mb-4 text-stone-800">Маршрут</h3>
+                <div id="timeline-nav" class="space-y-2">
+                </div>
+            </aside>
+
+            <div id="main-content" class="lg:col-span-8 xl:col-span-9">
+                <div id="intro-view" class="bg-white p-8 rounded-2xl shadow-lg">
+                    <h2 class="text-3xl font-bold text-stone-800 mb-4">Добро пожаловать в Город Гномов!</h2>
+                    <p class="text-stone-600 leading-relaxed mb-4">Вроцлав — это город, где история встречается со сказкой. Этот тур создан специально для семей: мы будем не только осматривать величественные достопримечательности, но и вести увлекательную охоту на знаменитых вроцлавских гномов. Приложение поможет вам легко ориентироваться, расскажет удивительные истории для старших и предложит веселые задания для младших.</p>
+                    <p class="text-stone-600 leading-relaxed">Выберите любую остановку из списка слева, чтобы начать свое путешествие, или следуйте по порядку, чтобы ничего не пропустить. Желаем вам незабываемых впечатлений!</p>
+                </div>
+                <div id="stop-details-view" class="hidden">
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <script>
+        const tourData = [
+            {
+                id: 1,
+                title: "Рыночная площадь (Rynek)",
+                duration: 45,
+                walking: 1,
+                type: 'sight',
+                description: "Рыночная площадь является живым сердцем Вроцлава. Эта великолепная средневековая площадь, одна из крупнейших в Европе, служила шумным центром города более 800 лет, свидетельницей столетий торговли, грандиозных праздников и повседневной жизни. Она окружена потрясающими, красочными доходными домами, каждый из которых обладает своей уникальной историей и архитектурным стилем.",
+                dwarfHunt: {
+                    title: "Начинаем охоту!",
+                    text: "Охота на гномов начинается сразу по прибытии! Осмотрите площадь на предмет: <ul class='list-disc list-inside mt-2 space-y-1'><li><b>Папа Гном (Papa Krasnal):</b> Первая официальная статуя гнома, расположенная рядом с кафе Barbara по адресу Świdnicka 8B.</li><li><b>Сизифы (Syzyfki):</b> Два гнома, толкающие большой каменный шар на улице Свидницкой.</li><li><b>Голубятник (Gołębiarz):</b> Гном, взаимодействующий с голубями, которых всегда много на площади.</li></ul>"
+                },
+                hiddenFact: {
+                    title: "Город-Феникс и Позорный столб",
+                    text: "<b>Город-Феникс:</b> После Второй мировой войны площадь была почти полностью разрушена. Жители Вроцлава с невероятной точностью восстановили ее, сохранив исторический облик. Каждое здание здесь — символ стойкости. <br><br> <b>Прошлое позорного столба:</b> Каменный столб в центре площади в средневековье был местом публичных наказаний — от порки до казней. Это суровое напоминание о законах того времени."
+                },
+                kidTip: "Посчитайте голубей на площади! А еще найдите современный стеклянный фонтан — он сильно отличается от старинных зданий вокруг. Отличное место для семейного фото!"
+            },
+            {
+                id: 2,
+                title: "Старая ратуша",
+                duration: 20,
+                walking: 2,
+                type: 'sight',
+                description: "Доминируя в центре Рыночной площади, Старая ратуша является изысканным образцом готической архитектуры. Ее строительство длилось более 250 лет. Сегодня в ней находится музей и знаменитый ресторан Piwnica Świdnicka в подвале.",
+                dwarfHunt: {
+                    title: "Гражданские гномы",
+                    text: "Учитывая историческую функцию Ратуши как суда, поищите гнома-судью (Sędzia) поблизости. Он символизирует отправление правосудия."
+                },
+                hiddenFact: {
+                    title: "Тайный пивной тоннель",
+                    text: "Под Ратушей находится Piwnica Świdnicka, один из старейших ресторанов Европы. В средневековье пиво из города Свидница доставлялось сюда по секретному подземному тоннелю! А на фасаде поищите статую 'Маленького Медведя', добавленную лишь в 1902 году."
+                },
+                kidTip: "Найдите на восточной стене Ратуши старинные астрономические часы. Попробуйте угадать, который час они показывают!"
+            },
+            {
+                id: 3,
+                title: "Дома 'Гензель и Гретель'",
+                duration: 35,
+                walking: 5,
+                type: 'sight',
+                description: "Два своеобразных средневековых дома, соединенные аркой, словно держатся за руки. Рядом стоит величественная церковь Святой Елизаветы, одна из самых высоких в городе.",
+                dwarfHunt: {
+                    title: "Ученые и не только",
+                    text: "Здесь можно найти гнома-книготорговца (Księgarz). А если пройти немного дальше, то и гнома-заключенного (Więzień) у старой городской тюрьмы."
+                },
+                hiddenFact: {
+                    title: "Секрет арки и несчастливая башня",
+                    text: "На арке, соединяющей дома, есть латинская надпись 'Mors Ianua Vitae' — 'Смерть — врата жизни'. Это потому, что раньше здесь было кладбище. А башня церкви Святой Елизаветы много раз страдала от пожаров и ураганов, но ее всегда восстанавливали. Сегодня на нее можно подняться (более 300 ступеней)."
+                },
+                kidTip: "Сделайте фото, как вы 'держитесь за руки' под аркой. А еще можно подняться на башню, если хватит сил — вид оттуда потрясающий!"
+            },
+            {
+                id: 4,
+                title: "Перерыв на мороженое",
+                duration: 25,
+                walking: 6,
+                type: 'break',
+                description: "Заслуженный отдых и вкусное угощение! В центре Вроцлава много отличных кафе-мороженых. Например, Tralalala Cafe (ul. Więzienna 21) или Lody Barton (на Рынке).",
+                dwarfHunt: {
+                    title: "Сладкоежка-гном",
+                    text: "Поищите гномов, которые тоже любят сладкое! Часто они находятся прямо у входа в кафе и держат в руках рожок мороженого."
+                },
+                hiddenFact: {
+                    title: "Лаборатория мороженого и вкус истории",
+                    text: "В Tralalala Cafe можно наблюдать, как готовят мороженое, через стекло — настоящая 'сладкая лаборатория'. А Lody Barton — это семейный бизнес с 1971 года, так что вы пробуете мороженое, которое ели поколения жителей Вроцлава."
+                },
+                kidTip: "Позвольте детям выбрать самый необычный вкус! Это отличная возможность отдохнуть и набраться сил для продолжения прогулки."
+            },
+            {
+                id: 5,
+                title: "Вроцлавский университет",
+                duration: 40,
+                walking: 11,
+                type: 'sight',
+                description: "Главное здание университета — великолепный барочный шедевр. Этот вуз выпустил девять нобелевских лауреатов. Жемчужина здания — актовый зал Леопольдина, украшенный фресками и позолотой.",
+                dwarfHunt: {
+                    title: "Студенческая жизнь гномов",
+                    text: "Рядом с университетом ищите гнома-фехтовальщика (Szermierz), который символизирует студенческие споры. Также здесь можно встретить гнома-математика."
+                },
+                hiddenFact: {
+                    title: "Шестипалый херувим и тайное послание",
+                    text: "В зале Леопольдина на одной из фресок у ангелочка-херувима... шесть пальцев на ноге! Реставраторы решили оставить эту забавную ошибку художника. А еще во время ремонта в стене нашли записку на немецком, спрятанную много веков назад."
+                },
+                kidTip: "Представьте, что вы студенты, которые учились здесь сотни лет назад. Актовый зал Леопольдина похож на тронный зал во дворце, правда?"
+            },
+            {
+                id: 6,
+                title: "Тумский остров",
+                duration: 50,
+                walking: 12,
+                type: 'sight',
+                description: "Старейшая часть Вроцлава, место, где зародился город. Перейдя Тумский мост, вы попадете в атмосферу спокойствия и старины с многочисленными церквями.",
+                dwarfHunt: {
+                    title: "Речные и важные гномы",
+                    text: "У реки ищите гнома-прачку (Pracz Odrzański). А возле собора может сидеть самый главный гном — Лидер гномов (Krasnal Naczelny)."
+                },
+                hiddenFact: {
+                    title: "Настоящий фонарщик и связь с Коперником",
+                    text: "Это одно из немногих мест в Европе, где газовые фонари каждый вечер вручную зажигает фонарщик в черном плаще и цилиндре! А еще здесь несколько лет служил священником сам Николай Коперник. На Тумском мосту пары вешают 'замки любви' — современная традиция в историческом месте."
+                },
+                kidTip: "Если вы здесь вечером, обязательно найдите фонарщика! Это настоящее волшебство. А у реки можно покормить уток и лебедей."
+            },
+            {
+                id: 7,
+                title: "Отдых на детской площадке",
+                duration: 45,
+                walking: 0,
+                type: 'break',
+                description: "После долгой прогулки время выплеснуть энергию! Рядом с Тумским островом есть Wyspa Słodowa — 'Остров-площадка' с отличными игровыми зонами. Другой вариант — Старогородской парк с красивой старинной каруселью.",
+                dwarfHunt: {
+                    title: "Игровые гномы",
+                    text: "В Старогородском парке возле Театра кукол можно найти гнома Фестивалиуса. Там же, у памятника Копернику, есть ODDGuy с цепью."
+                },
+                hiddenFact: {
+                    title: "Двойное назначение острова и искусство карусели",
+                    text: "Wyspa Słodowa — это не только детская площадка, но и популярное место встреч молодежи для пикников и концертов. А карусель в Старогородском парке — настоящее произведение искусства: на ее лошадках нарисованы виды Вроцлава."
+                },
+                kidTip: "Дайте детям вволю наиграться! Если вы в парке, обязательно прокатитесь на старинной французской карусели — это очень красиво."
+            }
+        ];
+
+        const introView = document.getElementById('intro-view');
+        const detailsView = document.getElementById('stop-details-view');
+        const timelineNav = document.getElementById('timeline-nav');
+        
+        function displayStopDetails(stopId) {
+            const stop = tourData.find(s => s.id === stopId);
+            if (!stop) return;
+
+            introView.classList.add('hidden');
+            detailsView.classList.remove('hidden');
+
+            detailsView.innerHTML = `
+                <div class="bg-white p-6 md:p-8 rounded-2xl shadow-lg animate-fade-in">
+                    <h2 class="text-3xl font-bold text-stone-800 mb-2">${stop.title}</h2>
+                    <div class="flex items-center text-sm text-stone-500 mb-6">
+                        <span>⏳ ${stop.duration} мин на месте</span>
+                        <span class="mx-2">|</span>
+                        <span>🚶‍♂️ ${stop.walking} мин до след.</span>
+                    </div>
+
+                    <div class="mb-6">
+                        <div class="flex border-b border-stone-200">
+                            <button data-tab="description" class="tab-btn py-2 px-4 text-stone-500 border-b-2 border-transparent hover:border-stone-300 transition-colors tab-active">Описание</button>
+                            <button data-tab="dwarfHunt" class="tab-btn py-2 px-4 text-stone-500 border-b-2 border-transparent hover:border-stone-300 transition-colors">Охота на гномов</button>
+                            <button data-tab="hiddenFact" class="tab-btn py-2 px-4 text-stone-500 border-b-2 border-transparent hover:border-stone-300 transition-colors">Скрытый факт</button>
+                        </div>
+                        <div id="tab-content" class="mt-4 text-stone-700 leading-relaxed">
+                            <!-- Content will be injected here -->
+                        </div>
+                    </div>
+
+                    <div class="bg-teal-50 border-l-4 border-teal-500 text-teal-800 p-4 rounded-r-lg">
+                        <h4 class="font-bold">💡 Совет для детей</h4>
+                        <p class="mt-1">${stop.kidTip}</p>
+                    </div>
+
+                    <div class="flex justify-between mt-8">
+                        <button id="prev-btn" class="bg-stone-200 hover:bg-stone-300 text-stone-700 font-bold py-2 px-4 rounded-lg transition-colors">&larr; Назад</button>
+                        <button id="next-btn" class="bg-teal-600 hover:bg-teal-700 text-white font-bold py-2 px-4 rounded-lg transition-colors">Далее &rarr;</button>
+                    </div>
+                </div>
+            `;
+            
+            const displayTabContent = (tabName) => {
+                const tabContent = document.getElementById('tab-content');
+                const contentData = stop[tabName];
+                if(typeof contentData === 'string') {
+                    tabContent.innerHTML = contentData;
+                } else {
+                    tabContent.innerHTML = `<h4 class="font-bold text-lg mb-2">${contentData.title}</h4><p>${contentData.text}</p>`;
+                }
+
+                document.querySelectorAll('.tab-btn').forEach(btn => {
+                    btn.classList.toggle('tab-active', btn.dataset.tab === tabName);
+                });
+            };
+
+            displayTabContent('description'); 
+
+            document.querySelectorAll('.tab-btn').forEach(btn => {
+                btn.addEventListener('click', () => displayTabContent(btn.dataset.tab));
+            });
+            
+            const prevBtn = document.getElementById('prev-btn');
+            const nextBtn = document.getElementById('next-btn');
+
+            if (stop.id === 1) {
+                prevBtn.style.visibility = 'hidden';
+            } else {
+                prevBtn.style.visibility = 'visible';
+                prevBtn.onclick = () => displayStopDetails(stop.id - 1);
+            }
+
+            if (stop.id === tourData.length) {
+                nextBtn.style.visibility = 'hidden';
+            } else {
+                nextBtn.style.visibility = 'visible';
+                nextBtn.onclick = () => displayStopDetails(stop.id + 1);
+            }
+
+            updateActiveTimeline(stop.id);
+        }
+
+        function renderTimeline() {
+            timelineNav.innerHTML = tourData.map(stop => `
+                <div data-id="${stop.id}" class="timeline-item flex items-center cursor-pointer p-3 rounded-lg hover:bg-amber-100 transition-all duration-300">
+                    <div class="flex-shrink-0 h-10 w-10 rounded-full ${stop.type === 'sight' ? 'bg-teal-600' : 'bg-amber-500'} flex items-center justify-center text-white font-bold text-lg">${stop.id}</div>
+                    <div class="ml-4">
+                        <h4 class="font-semibold text-stone-800">${stop.title}</h4>
+                        <p class="text-sm text-stone-500">${stop.duration} мин</p>
+                    </div>
+                </div>
+            `).join('');
+
+            document.querySelectorAll('.timeline-item').forEach(item => {
+                item.addEventListener('click', () => {
+                    const id = parseInt(item.dataset.id);
+                    displayStopDetails(id);
+                });
+            });
+        }
+        
+        function updateActiveTimeline(activeId) {
+             document.querySelectorAll('.timeline-item').forEach(item => {
+                const id = parseInt(item.dataset.id);
+                if (id === activeId) {
+                    item.classList.add('bg-amber-100', 'timeline-item-active');
+                    item.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+                } else {
+                    item.classList.remove('bg-amber-100', 'timeline-item-active');
+                }
+            });
+        }
+
+        function renderTimeChart() {
+            const ctx = document.getElementById('timeAllocationChart').getContext('2d');
+            const sightseeingTime = tourData.filter(s => s.type === 'sight').reduce((acc, s) => acc + s.duration, 0);
+            const walkingTime = tourData.reduce((acc, s) => acc + s.walking, 0);
+            const breakTime = tourData.filter(s => s.type === 'break').reduce((acc, s) => acc + s.duration, 0);
+
+            new Chart(ctx, {
+                type: 'doughnut',
+                data: {
+                    labels: ['Осмотр', 'Прогулка', 'Перерывы'],
+                    datasets: [{
+                        data: [sightseeingTime, walkingTime, breakTime],
+                        backgroundColor: ['#0d9488', '#f59e0b', '#f97316'],
+                        borderColor: '#fdfbf6',
+                        borderWidth: 4,
+                        hoverOffset: 8
+                    }]
+                },
+                options: {
+                    responsive: true,
+                    maintainAspectRatio: false,
+                    cutout: '70%',
+                    plugins: {
+                        legend: {
+                            position: 'bottom',
+                            labels: {
+                                color: '#44403c',
+                                font: {
+                                    size: 14,
+                                    family: "'Nunito', sans-serif"
+                                }
+                            }
+                        }
+                    }
+                }
+            });
+        }
+
+        document.addEventListener('DOMContentLoaded', () => {
+            document.getElementById('total-stops').textContent = tourData.length;
+            renderTimeline();
+            renderTimeChart();
+        });
+
+    </script>
+</body>
+</html>

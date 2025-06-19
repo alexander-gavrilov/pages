@@ -51,6 +51,55 @@
                 padding-right: 0.5rem;
             }
         }
+
+    @media (max-width: 1023px) {
+      /* Styles for the #aside-menu when it's visible on mobile */
+      #aside-menu:not(.hidden) {
+        position: fixed;
+        top: 0;
+        left: 0;
+        right: 0;
+        bottom: 0;
+        overflow-y: auto;
+        z-index: 40;
+        border-radius: 0; /* Override site-wide rounded corners for mobile full screen */
+        /* background and padding will come from existing Tailwind classes */
+      }
+
+      /* Adjustments for .chart-container inside the fixed menu */
+      #aside-menu:not(.hidden) .chart-container {
+        width: auto !important;
+        min-width: unset !important;
+        margin-left: auto !important;
+        margin-right: auto !important;
+        /* Keep existing height from @media (max-width: 640px) for now */
+      }
+
+      /* Adjustments for .timeline-scroll inside the fixed menu */
+      #aside-menu:not(.hidden) .timeline-scroll {
+        margin-left: 0 !important; /* Remove negative margins */
+        margin-right: 0 !important;
+      }
+
+      /* Ensure menu is viewport height and toggle button is above it */
+      #aside-menu:not(.hidden) {
+        height: 100vh; /* Full viewport height */
+      }
+
+      #menu-toggle[aria-expanded="true"] { /* Style for when menu is open */
+        position: fixed; /* Or sticky, depending on desired scroll behavior with page */
+        top: 1rem; /* Adjust as needed */
+        right: 1rem; /* Adjust as needed */
+        z-index: 50; /* Higher than #aside-menu's z-index: 40 */
+        /* Ensure it's not full width if fixed/sticky and on top right */
+        width: auto;
+      }
+
+      /* Prevent body scroll when menu is open */
+      body.mobile-menu-open {
+        overflow: hidden;
+      }
+    }
     </style>
 </head>
 <body class="bg-amber-50 text-stone-800">
@@ -93,7 +142,7 @@
                 </div>
 
                 <h3 class="text-xl font-bold mt-8 mb-4 text-stone-800">Распределение времени</h3>
-                <div class="chart-container relative h-64 w-full max-w-xs mx-auto"></div>
+                <div class="chart-container relative h-64 w-full max-w-xs mx-auto">
                     <canvas id="timeAllocationChart"></canvas>
                 </div>
 
@@ -122,9 +171,10 @@
             const asideMenu = document.getElementById('aside-menu');
             if (menuToggle && asideMenu) {
                 menuToggle.addEventListener('click', () => {
-                    const isOpen = asideMenu.classList.toggle('hidden');
-                    menuToggle.setAttribute('aria-expanded', String(!isOpen));
-                    menuToggle.textContent = isOpen ? '📍 Показать маршрут и статистику' : '✖️ Скрыть меню';
+                    const isNowVisible = !asideMenu.classList.toggle('hidden');
+                    menuToggle.setAttribute('aria-expanded', String(isNowVisible));
+                    menuToggle.textContent = isNowVisible ? '✖️ Скрыть меню' : '📍 Показать маршрут и статистику';
+                    document.body.classList.toggle('mobile-menu-open', isNowVisible);
                 });
             }
         });
